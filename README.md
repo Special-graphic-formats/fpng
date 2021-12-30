@@ -1,9 +1,11 @@
 # fpng
-fpng is a very fast C++ .PNG image reader/writer for 24/32bpp images. fpng.cpp was written to see just how fast you can write .PNG's without sacrificing too much compression. The files written by fpng conform to the [PNG standard](https://www.w3.org/TR/PNG/), are readable using any PNG decoder, and validate successfully using [pngcheck](https://www.w3.org/TR/PNG/). PNG files written using fpng can also be read using fpng significantly faster than other PNG libraries, due to its explicit use of [length limited Huffman codes](https://create.stephan-brumme.com/length-limited-prefix-codes/) and an optimized decoder that exploits the properties of these codes.
+fpng is a very fast C++ .PNG image reader/writer for 24/32bpp images. fpng.cpp was written to see just how fast you can write .PNG's without sacrificing too much compression. The files written by fpng conform to the [PNG standard](https://www.w3.org/TR/PNG/), are readable using any PNG decoder, and validate successfully using [pngcheck](https://www.w3.org/TR/PNG/). PNG files written using fpng can also be read using fpng significantly faster than other PNG libraries, due to its explicit use of [Length-Limited Prefix Codes](https://create.stephan-brumme.com/length-limited-prefix-codes/) and an optimized decoder that exploits the properties of these codes.
 
-fpng.cpp compression compared to stb_image_write.h: 12-19x faster with roughly 5-11% avg. smaller files.
+fpng.cpp compression compared to stb_image_write.h: 12-19x faster with roughly 5-11% avg. smaller files. 
 
-fpng.cpp decompression compared to stb_image.h: ~3x faster
+fpng.cpp decompression compared to stb_image.h: 2.5-3x faster (on fpng compressed PNG's)
+
+fpng.cpp compared to libpng: ~23x faster compression, 2.5-3x faster decompression (on fpng compressed PNG's)
 
 Here's an example image encoded by fpng (a downsampled version of "bridge" from [here](http://imagecompression.info/test_images/)):
 ![fpng encoded "bridge" image](https://github.com/richgel999/fpng/blob/main/example.png)
@@ -88,7 +90,7 @@ There are a few optional compile-time defines you can use to configure fpng, par
 
 ### Encoding
 
-Call one of these key C-style functions in the "fpng" namespace:
+Call one of these C-style functions in the "fpng" namespace:
 
 ```
 namespace fpng {
@@ -101,7 +103,7 @@ namespace fpng {
 
 ### Decoding
 
-The included fast decoder will only decode PNG files created by fpng. However, it has a full PNG chunk parser, and when it detects PNG files not written by fpng it returns the error code `FPNG_DECODE_NOT_FPNG` so you can fall back to a general purpose PNG reader. Also, the decompressor validates the compressed data during decompression and will immediately stop and return `FPNG_DECODE_NOT_FPNG` whenever any of the fpng constraints (implied by the fdEC marker's presence) are violated. You can use ```fpng_get_info()``` to quickly detect if a PNG file can be decoded using fpng.
+**The included fast decoder will only decode PNG files created by fpng.** However, it has a full PNG chunk parser, and when it detects PNG files not written by fpng it returns the error code `FPNG_DECODE_NOT_FPNG` so you can fall back to a general purpose PNG reader. Also, the decompressor validates the compressed data during decompression and will immediately stop and return `FPNG_DECODE_NOT_FPNG` whenever any of the fpng constraints (implied by the fdEC marker's presence) are violated. You can use ```fpng_get_info()``` to quickly detect if a PNG file can be decoded using fpng.
 
 ```
 namespace fpng {
@@ -115,13 +117,13 @@ namespace fpng {
 
 `width`, `height`, `channels_in_file` will be set to the image's dimensions and number of channels, which will always be 3 or 4.
 
-`desired_channels` must be 3 or 4. If the input PNG file is 32bpp and you request 24bpp, the alpha channel be discarded. If the input is 24bpp and you request 32bpp, the alpha channel will be set to 0xFF.
+`desired_channels` must be 3 or 4. If the input PNG file is 32bpp and you request 24bpp, the alpha channel will be discarded. If the input is 24bpp and you request 32bpp, the alpha channel will be set to 0xFF.
 
 The return code will be `fpng::FPNG_DECODE_SUCCESS` on success, `fpng::FPNG_DECODE_NOT_FPNG` if the PNG file should be decoded with a general purpose decoder, or one of the other error values.
 
 ### Utility Functions
 
-For convienance some of the lib's internal functionality is exposed through these API's:
+For convenience some of the lib's internal functionality is exposed through these API's:
 
 ```
 namespace fpng {
@@ -153,9 +155,9 @@ There are two compressor variants in this release: a faster single pass compress
 
 The fast decompressor included in fpng.cpp can explictly only handle PNG files created by fpng. To detect these files, it looks for a PNG private ancillary chunk named "fdEC", which other readers will ignore because it's not marked as a "critical" PNG chunk. If this chunk isn't found, or the file doesn't conform to fpng's single IDAT and zlib constraints, the decompressor returns FPNG_DECODE_NOT_FPNG. The decompressor itself has numerous checks to ensure the PNG file was written by fpng (i.e. even if the fdEC chunk is present we don't blindly assume the Deflate data follows the right constraints).
 
-The decompressor's memory usage is low relative to other PNG decompressors, because it doesn't need to make any temporary allocations to temporarily hold the decompressed zlib data. (This is one side benefit of always using LZ matches with a distance of only 3 or 4 bytes.) The only large allocation is the one used to hold the output image buffer, which it directly decompresses into. This property is useful on memory-constrained embedded platforms. It's possible for a fpng decompressor to only need to hold 2 scanlines in memory.
+The decompressor's memory usage is low relative to other PNG decompressors, because it doesn't need to make any temporary allocations to hold the decompressed zlib data. (This is one side benefit of always using LZ matches with a distance of only 3 or 4 bytes.) The only large allocation is the one used to hold the output image buffer, which it directly decompresses into. This property is useful on memory-constrained embedded platforms. It's possible for a fpng decompressor to only need to hold 2 scanlines in memory.
 
-Passes over the input image and dynamic allocations are minimized, although it does use ```std::vector``` internally. The first scanline always uses filter #0, and the rest use filter #2 (previous scanline). It uses the fast CRC-32 code described by Brumme [here](https://create.stephan-brumme.com/crc32/). The original high-level PNG function (that code that writes the headers) was written by [Alex Evans](https://gist.github.com/908299).
+Passes over the input image and dynamic allocations are minimized, although it does use ```std::vector``` internally. The first scanline always uses filter #0, and the rest use filter #2 (previous scanline). It uses the fast "slice by 4" CRC-32 algorithm described by Brumme [here](https://create.stephan-brumme.com/crc32/). The original high-level PNG function (that code that writes the headers) was written by [Alex Evans](https://gist.github.com/908299).
 
 
 ## Fuzzing
