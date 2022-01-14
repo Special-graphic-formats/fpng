@@ -1,3 +1,9 @@
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/richgel999/fpng)
+![GitHub Release Date](https://img.shields.io/github/release-date/richgel999/fpng)
+![GitHub repo size](https://img.shields.io/github/repo-size/richgel999/fpng)
+![GitHub all releases](https://img.shields.io/github/downloads/richgel999/fpng/total)
+![GitHub](https://img.shields.io/github/license/richgel999/fpng)
+
 # fpng
 fpng is a very fast C++ .PNG image reader/writer for 24/32bpp images. It's a [single source file](src/fpng.h) with no dependencies on any other library. fpng.cpp was written to see just how fast you can write .PNG's without sacrificing too much compression. The files written by fpng conform to the [PNG standard](https://www.w3.org/TR/PNG/), are readable using any PNG decoder, and load or validate successfully using libpng, wuffs, lodepng, stb_image, and [pngcheck](http://www.libpng.org/pub/png/apps/pngcheck.html). PNG files written using fpng can also be read using fpng significantly faster than other PNG libraries, due to its explicit use of [Length-Limited Prefix Codes](https://create.stephan-brumme.com/length-limited-prefix-codes/) and an [optimized decoder](https://fastcompression.blogspot.com/2015/10/huffman-revisited-part-4-multi-bytes.html) that exploits the properties of these codes.
 
@@ -10,7 +16,7 @@ fpng.cpp compared to libpng: ~23x faster compression, 2.5-3x faster decompressio
 fpng.cpp compared to Wuffs decompression: roughly 10% faster decompression (on fpng compressed PNG's - note Wuffs decompression is in general *extremely* fast)
 
 Here's an example image encoded by fpng (a downsampled version of "bridge" from [here](http://imagecompression.info/test_images/)):
-![fpng encoded "bridge" image](https://github.com/richgel999/fpng/blob/main/example.png)
+![fpng encoded "bridge" image](http://imagecompression.info/test_images/big_thumbnails/bridge.jpg)
 
 A real-world benchmark using an assortment of 303 24/32bpp test images used for GPU texture compression benchmarks (mps="megapixels/second", sorted by compression rate):
 
